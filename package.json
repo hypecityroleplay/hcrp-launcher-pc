@@ -1,0 +1,112 @@
+{
+  "name": "hype-city-roleplay",
+  "version": "1.0.0",
+  "description": "Launcher desktop para Hype City Roleplay",
+  "author": "HCRP",
+  "main": "main.js",
+  "scripts": {
+    "clean": "if exist dist-obf rmdir /s /q dist-obf & if exist dist rmdir /s /q dist",
+    "prepare:icon": "node scripts/prepare-icon.js",
+    "obfuscate:js": "node scripts/obfuscate-fast.js",
+    "minify:html": "html-minifier-terser --collapse-whitespace --remove-comments --minify-css true --minify-js true src/index.html -o dist-obf/src/index.html",
+    "copy:assets": "xcopy /E /I /Y assets dist-obf\\assets >nul && xcopy /E /I /Y src\\components dist-obf\\src\\components >nul",
+    "minify:css": "cleancss -o dist-obf/assets/css/style.css assets/css/style.css",
+    "copy:package": "node -e \"const fs=require('fs');const p=require('./package.json');fs.mkdirSync('dist-obf',{recursive:true});fs.writeFileSync('dist-obf/package.json',JSON.stringify({name:p.name,version:p.version,displayVersion:p.displayVersion,description:p.description,author:p.author,main:p.main,dependencies:p.dependencies},null,2));\"",
+    "prepare:app": "npm run clean && npm run prepare:icon && npm run verify:taskbar-icon && npm run obfuscate:js && npm run minify:html && npm run copy:assets && npm run minify:css && npm run copy:package && npm run copy:app-icon && npm run copy:runtime",
+    "build": "npm run prepare:app && electron-builder --config.directories.app=dist-obf --publish never",
+    "build:dir": "npm run prepare:app && electron-builder --dir --config.directories.app=dist-obf",
+    "start": "npm run prepare:icon && electron .",
+    "start:raw": "electron .",
+    "reset:nsis-cache": "if exist \"%LOCALAPPDATA%\\electron-builder\\Cache\\nsis\" rmdir /s /q \"%LOCALAPPDATA%\\electron-builder\\Cache\\nsis\" & if exist \"%LOCALAPPDATA%\\electron-builder\\Cache\\nsis-resources\" rmdir /s /q \"%LOCALAPPDATA%\\electron-builder\\Cache\\nsis-resources\"",
+    "verify:taskbar-icon": "node scripts/verify-taskbar-icon.js",
+    "copy:app-icon": "node scripts/copy-app-icon.js",
+    "copy:runtime": "node scripts/copy-runtime-assets.js"
+  },
+  "build": {
+    "appId": "com.HCRP.launcher",
+    "productName": "HCRP Launcher",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "nsis",
+      "artifactName": "HCRP-Launcher-Setup-v1.0.${ext}",
+      "icon": "icon.ico",
+      "executableName": "HCRP-Launcher"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "HCRP Launcher",
+      "uninstallDisplayName": "HCRP Launcher",
+      "runAfterFinish": true,
+      "installerLanguages": [
+        "pt_BR"
+      ],
+      "language": "1046",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "installerHeaderIcon": "icon.ico",
+      "include": "build/installer.nsh"
+    },
+    "files": [
+      "**/*",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}",
+      "!cef_files/**"
+    ],
+    "extraResources": [
+      {
+        "from": "dist-obf/cef_files",
+        "to": "cef_files",
+        "filter": [
+          "**/*",
+          "!cef/cache/**",
+          "!cef/user_data/**",
+          "!cef/gpucache/**",
+          "!**/*.log"
+        ]
+      }
+    ],
+    "asar": {
+      "smartUnpack": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "hypecityroleplay",
+        "repo": "hcrp-launcher-pc"
+      }
+    ],
+    "afterPack": "scripts/after-pack-clean.js"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^26.15.3",
+    "javascript-obfuscator": "^4.2.2",
+    "html-minifier-terser": "^7.2.0",
+    "clean-css-cli": "^5.6.3",
+    "rimraf": "^6.0.1",
+    "sharp": "^0.34.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "express": "^5.2.1",
+    "extract-zip": "^2.0.1",
+    "samp-query": "^0.1.5"
+  },
+  "displayVersion": "1.0"
+}

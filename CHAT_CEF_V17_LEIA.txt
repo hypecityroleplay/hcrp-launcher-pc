@@ -1,0 +1,20 @@
+HypeRP Chat CEF V17 - Launcher 1.3.30
+
+COMPORTAMENTO
+- O chat fica totalmente invisivel quando nao ha mensagem recente.
+- Ao chegar uma mensagem, aparecem apenas as bolhas recentes por alguns segundos.
+- T ou F6 abre o historico completo + barra de digitacao.
+- Enter envia; Esc fecha.
+- Historico fica salvo enquanto a pagina CEF estiver carregada.
+- Scroll fica do lado direito e so aparece quando necessario.
+- O visual usa HTML/CSS/Chromium, portanto a fonte fica lisa e nao pixelada.
+- O chat original do SA-MP e bloqueado pelo modulo nativo do Launcher.
+
+IMPORTANTE
+CEF precisa da ponte da GameMode para criar o browser e enviar/receber eventos.
+O pacote server-patch contem ChatCEF.inc e uma copia da GM ja com o include adicionado.
+
+URL local do chat:
+http://127.0.0.1:28765/hcrp-chat/index.html
+
+Browser ID: 9107
