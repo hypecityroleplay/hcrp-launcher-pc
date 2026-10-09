@@ -3,6 +3,8 @@ on:
   push:
     branches: [cef-native-handshake-repair]
   workflow_dispatch:
+  pull_request:
+    branches: [main]
 permissions:
   contents: read
 jobs:
@@ -70,7 +72,7 @@ jobs:
                       // Reply again on every OPEN_CONNECTION. Legacy Laminar may emit
                       // Connect only once, and a lost first reply otherwise stalls.
                       let response = packets::OpenConnection {};
-                      if let Some(bytes) = try_into_packet(response) {
+                      if let Ok(bytes) = try_into_packet(response) {
                           let packet = Packet::unreliable_sequenced(addr, bytes, None);
                           let _ = self.sender.send(packet);
                       }
