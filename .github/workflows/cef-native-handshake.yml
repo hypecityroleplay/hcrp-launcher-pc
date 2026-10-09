@@ -10,12 +10,11 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    container: debian:bullseye
+    container: ubuntu:20.04
     timeout-minutes: 30
     steps:
       - name: Install i386 cross-compiler
         run: |
-          sed -i '/debian-security/d; /bullseye-updates/d' /etc/apt/sources.list || true
           apt-get update -qq
           DEBIAN_FRONTEND=noninteractive apt-get install -y gcc-multilib g++-multilib pkg-config curl ca-certificates git build-essential
       - name: Install Rust
