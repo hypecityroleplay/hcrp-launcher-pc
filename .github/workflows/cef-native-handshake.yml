@@ -1,0 +1,107 @@
+name: CEF Native Handshake Repair
+on:
+  push:
+    branches: [cef-native-handshake-repair]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Install i386 cross-compiler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-multilib g++-multilib pkg-config
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: i686-unknown-linux-gnu
+      - name: Clone original CEF v1.3
+        run: |
+          git clone --depth 1 --branch v1.3 https://github.com/zottce/samp-cef.git samp-cef
+      - name: Apply tested-source handshake logic
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('samp-cef/server/src/server.rs')
+          s=p.read_text()
+          old="""        // клиента нет пшел нахрен
+                  if !self.clients.contains_key(&addr) {
+                      return;
+                  }
+          """
+          # Match directly on the two-sided guard; existing code is known from upstream v1.3.
+          old_guard="""        // клиента нет пшел нахрен
+                  if !self.clients.contains_key(&addr) {
+                      return;
+                  }
+          """
+          start=s.index('        // клиента нет пшел нахрен')
+          end=s.index('        match packet.packet_id {', start)
+          prefix='''        // Recover CEF handshakes when the first UDP Connect arrived before
+                  // Pawn registered the SA-MP player, or the OPEN_CONNECTION reply was lost.
+                  if packet.packet_id == PacketId::OPEN_CONNECTION {
+                      self.handle_new_connection(addr);
+                      return;
+                  }
+                  if packet.packet_id == PacketId::REQUEST_JOIN && !self.clients.contains_key(&addr) {
+                      self.handle_new_connection(addr);
+                  }
+                  if !self.clients.contains_key(&addr) {
+                      return;
+                  }
+
+          '''
+          s=s[:start]+prefix+s[end:]
+          a=s.index('    fn handle_new_connection(&mut self, addr: SocketAddr) {')
+          b=s.index('    // samp server side', a)
+          s=s[:a]+'''    fn handle_new_connection(&mut self, addr: SocketAddr) {
+                  // Only known SA-MP player IPs may authenticate.
+                  if let Some(player_id) = self.allowed.get(&addr.ip()).cloned() {
+                      if !self.clients.contains_key(&addr) {
+                          let client = Client::new(player_id, addr);
+                          self.clients.insert(addr, client);
+                          println!("[CEF FIX] new UDP client: player={} peer={}", player_id, addr);
+                      }
+
+                      // Reply again on every OPEN_CONNECTION. Legacy Laminar may emit
+                      // Connect only once, and a lost first reply otherwise stalls.
+                      let response = packets::OpenConnection {};
+                      if let Some(bytes) = try_into_packet(response) {
+                          let packet = Packet::unreliable_sequenced(addr, bytes, None);
+                          let _ = self.sender.send(packet);
+                      }
+                  } else {
+                      println!("[CEF FIX] pending player registration for {}", addr.ip());
+                  }
+              }
+
+          '''+s[b:]
+          p.write_text(s)
+          lib=Path('samp-cef/server/src/lib.rs')
+          s=lib.read_text()
+          assert 'const PORT_OFFSET: u16 = 2;' in s
+          lib.write_text(s.replace('const PORT_OFFSET: u16 = 2;', 'const PORT_OFFSET: u16 = 9; // HypeCity: SA-MP 7770, CEF 7779'))
+          print('Native CEF patched; port stays on 7779.')
+          PY
+      - name: Compile 32-bit Linux CEF
+        working-directory: samp-cef
+        env:
+          CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+          CARGO_BUILD_JOBS: "2"
+        run: |
+          cargo build --release --target i686-unknown-linux-gnu -p server
+          file target/i686-unknown-linux-gnu/release/libserver.so
+          test -s target/i686-unknown-linux-gnu/release/libserver.so
+          mkdir -p artifact/plugins
+          cp target/i686-unknown-linux-gnu/release/libserver.so artifact/plugins/cef.so
+          sha256sum artifact/plugins/cef.so
+      - name: Publish only rebuilt CEF plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: HypeCity-CEF-native-repair
+          path: samp-cef/artifact/
+          if-no-files-found: error
