@@ -103,6 +103,29 @@ jobs:
           mkdir -p artifact/plugins
           cp target/i686-unknown-linux-gnu/release/libserver.so artifact/plugins/cef.so
           sha256sum artifact/plugins/cef.so
+      - name: Probe CEF initialisation on an isolated SA-MP-style process
+        working-directory: samp-cef
+        shell: bash
+        run: |
+          cat > /tmp/probe.c <<'C'
+          #include <stdio.h>
+          #include <dlfcn.h>
+          #include <stdint.h>
+          int main(void) {
+              void *h=dlopen("./target/i686-unknown-linux-gnu/release/libserver.so", RTLD_NOW);
+              if(!h){fprintf(stderr,"dlopen: %s\\n",dlerror());return 2;}
+              uint32_t (*supports)(void) = (void*)dlsym(h,"Supports");
+              if (!supports){fprintf(stderr,"dlsym failed\\n");return 3;}
+              fprintf(stderr,"Calling Supports()...\\n");fflush(stderr);
+              uint32_t ret=supports();
+              fprintf(stderr,"Supports returned 0x%x\\n",ret);fflush(stderr);
+              return 0;
+          }
+          C
+          gcc -m32 -o /tmp/cef_probe /tmp/probe.c -ldl
+          echo "port 7770" > server.cfg
+          RUST_BACKTRACE=1 timeout 10 /tmp/cef_probe
+          echo "Independent 32-bit Supports probe succeeded."
       - name: Publish only rebuilt CEF plugin
         uses: actions/upload-artifact@v4
         with:
