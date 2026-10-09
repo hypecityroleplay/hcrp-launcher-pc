@@ -16,7 +16,7 @@ jobs:
       - name: Install i386 cross-compiler
         run: |
           apt-get update -qq
-          DEBIAN_FRONTEND=noninteractive apt-get install -y gcc-multilib g++-multilib pkg-config curl ca-certificates git build-essential
+          DEBIAN_FRONTEND=noninteractive apt-get install -y gcc-multilib g++-multilib pkg-config curl ca-certificates git build-essential python3
       - name: Install Rust
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
