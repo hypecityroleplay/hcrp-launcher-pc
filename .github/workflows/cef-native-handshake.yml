@@ -15,6 +15,7 @@ jobs:
     steps:
       - name: Install i386 cross-compiler
         run: |
+          sed -i '/debian-security/d; /bullseye-updates/d' /etc/apt/sources.list || true
           apt-get update -qq
           DEBIAN_FRONTEND=noninteractive apt-get install -y gcc-multilib g++-multilib pkg-config curl ca-certificates git build-essential
       - name: Install Rust
